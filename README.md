@@ -1,179 +1,62 @@
-# OSL Social Sign-In for Unity
+# OSL Social Login
 
-A lightweight, cross-platform authentication plugin for Unity supporting Google, Facebook, Apple, and Steam Sign-In. This package provides a unified, easy-to-use C# interface (`ISignin`) and utilizes `ScriptableObject` settings to eliminate hardcoded credentials.
+A unified multi-platform social login solution for Unity.
 
-## Supported Platforms
-
-* **Google:** Android, iOS, WebGL, Standalone (PC / Windows)
-* **Facebook:** Android, iOS, WebGL *(Standalone PC is strictly not supported due to Meta's security policies)*
-* **Apple:** iOS (Native Only)
-* **Steam:** Standalone PC (Windows, macOS, Linux, Steam Deck)
-
-> **Note:** Apple Sign-In on non-iOS platforms requires complex redirect servers and domain verification. For security and maintainability, non-iOS platforms are not supported for Apple Sign-In.
+## Overview
+OSL Social Login provides a single, unified interface for integrating various social login platforms (Apple, Facebook, Google, Steam) into your Unity project. It abstracts specific SDK implementations behind a common interface, making it easy to selectively enable, disable, and manage platform-specific code without breaking your build.
 
 ## Features
+- **Unified Interface**: Use the ISocialLoginProvider adapter to perform login operations across any supported platform with identical method signatures and callbacks.
+- **Centralized Editor Setup**: Manage all API keys and application IDs in one convenient Editor Window via Tools > OSL > Social Login > Setup.
+- **Soft Dependencies**: Leveraging Assembly Definitions (smdef) and Scripting Define Symbols (e.g., OSL_GOOGLE, OSL_FACEBOOK), the package safely excludes unselected SDKs from compiling.
+- **Automated Build Process**: Pre-built processors automatically inject required elements (e.g., AndroidManifest values, .androidlib configurations, iOS Info.plist URL schemes) dynamically during build time.
 
-* **No Hardcoding:** Manage all your Client IDs, App IDs, and Tokens cleanly through Unity's Inspector via `ScriptableObject` settings in the `Resources` folder.
-* **Automated Builds:** Custom `PreProcessBuild` and `PostProcessBuild` scripts automatically configure your Android `AndroidManifest.xml` / `.androidlib` and iOS Xcode `Info.plist`. Zero manual configuration is required.
-* **Unified Interface:** Switch between Google, Facebook, Apple, and Steam using the exact same `ISignin` methods and callbacks.
+## Getting Started
 
-## Installation
-
-1. Open the Unity Editor and import the "OSL Social Sign-In" package.
-2. Navigate to **Assets > External Dependency Manager > Android Resolver > Force Resolve**. This is **mandatory** to fetch the required native Android SDKs (`.aar` files) for Google and Facebook.
-3. For iOS, simply build your project. The included automated scripts will automatically configure `AuthenticationServices.framework`, CocoaPods dependencies, and URL Schemes.
-4. For Steam, ensure that both `Facepunch.Steamworks.Win64.dll` and the native `steam_api64.dll` are placed inside your `Assets/Plugins/Steam/` folder.
-
-## Setup Guides
-
-Proper configuration of Client IDs and App settings is mandatory before writing any code.
-
-1. Create a folder named exactly `Resources` in your Unity project.
-2. Right-click inside the folder and navigate to **Create > OSL > Social** to create your settings files:
-   * `Google Auth Settings`
-   * `Facebook Auth Settings`
-   * `Apple Auth Settings`
-   * `Steam Auth Settings`
-3. Enter your respective App IDs and Client Secrets in the Inspector.
-4. **Steam Only:** Create a text file named exactly `steam_appid.txt` in the root folder of your Unity project (where the `.sln` file is) and enter your Steam App ID (or `480` for testing).
-
-## Quick Start
-
-Use the `ISignin` interface for a consistent implementation across all providers.
-
-### 1. Google Sign-In Example
-
-```csharp
-using UnityEngine;
-using osl.social.signin.core;
-using osl.social.signin.google;
-
-public class GoogleAuthExample : MonoBehaviour
-{
-    private ISignin googleSignin;
-
-    void Start()
+1. **Import SDKs**: Import the requisite SDKs (Google Sign-In, Facebook SDK for Unity, Steamworks.NET / Facepunch) depending on your target platforms.
+2. **Configure Settings**: 
+   - Open Tools > OSL > Social Login > Setup.
+   - Enable the providers you plan to use.
+   - Enter your App IDs, Client Tokens, and Client IDs.
+   - Click **Apply Settings**.
+3. **Usage Example**:
+    `csharp
+    // Call unified facade via specific provider adapter
+    var googleProvider = new GProvider(); 
+    googleProvider.Signin((result) => 
     {
-        // CRITICAL: Ensure the GameObject name exactly matches the native bridge target
-        gameObject.name = "GoogleSigninManager";
-
-        googleSignin = new GoogleSignin();
-        googleSignin.OnSignInSuccess += (token) => Debug.Log("Google Token: " + token);
-        googleSignin.OnSignInFailed += (error) => Debug.LogError("Error: " + error);
-
-        googleSignin.Init();
-    }
-
-    public void Login() => googleSignin.SignIn();
-}
-```
-
-### 2. Facebook Sign-In Example
-
-```csharp
-using UnityEngine;
-using osl.social.signin.core;
-using osl.social.signin.facebook;
-
-public class FacebookAuthExample : MonoBehaviour
-{
-    private ISignin facebookSignin;
-
-    void Start()
-    {
-        // CRITICAL: Ensure the GameObject name exactly matches the native bridge target
-        gameObject.name = "FacebookSigninManager";
-
-        facebookSignin = new FacebookSignin();
-        facebookSignin.OnSignInSuccess += (token) => Debug.Log("Facebook Access Token: " + token);
-        facebookSignin.OnSignInFailed += (error) => Debug.LogError("Error: " + error);
-
-        facebookSignin.Init();
-    }
-
-    public void Login() => facebookSignin.SignIn();
-}
-```
-
-### 3. Apple Sign-In Example (iOS Only)
-
-```csharp
-using UnityEngine;
-using osl.social.signin.core;
-using osl.social.signin.apple;
-
-public class AppleAuthExample : MonoBehaviour
-{
-    private ISignin appleSignin;
-
-    void Start()
-    {
-        // CRITICAL: Ensure the GameObject name exactly matches the native bridge target
-        gameObject.name = "AppleSigninManager";
-
-        appleSignin = new AppleSignin();
-        appleSignin.OnSignInSuccess += (token) => Debug.Log("Apple JWT: " + token);
-        appleSignin.OnSignInFailed += (error) => Debug.LogError("Error: " + error);
-
-        appleSignin.Init();
-    }
-
-    public void Login() => appleSignin.SignIn();
-}
-```
-
-### 4. Steam Sign-In Example (Standalone PC Only)
-
-```csharp
-using UnityEngine;
-using osl.social.signin.core;
-using osl.social.signin.steam;
-
-public class SteamAuthExample : MonoBehaviour
-{
-    private ISignin steamSignin;
-
-    void Start()
-    {
-        // CRITICAL: Ensure the GameObject name exactly matches the script name
-        gameObject.name = "SteamSigninManager";
-
-        steamSignin = new SteamSignin();
-        steamSignin.OnSignInSuccess += (ticketHex) => Debug.Log("Steam Session Ticket: " + ticketHex);
-        steamSignin.OnSignInFailed += (error) => Debug.LogError("Error: " + error);
-
-        steamSignin.Init();
-    }
-
-    void Update()
-    {
-        // CRITICAL: Steam requires this to be called every frame to process callbacks
-        if (Steamworks.SteamClient.IsValid)
+        if(result.IsSuccess) 
         {
-            Steamworks.SteamClient.RunCallbacks();
+            Debug.Log("Logged in successfully! Token: " + result.Token);
+            // Send this Token to your Backend Server for verification!
         }
-    }
+    });
+    `
 
-    public void Login() => steamSignin.SignIn();
-    
-    void OnApplicationQuit() => steamSignin?.SignOut();
-}
-```
+---
 
-## Backend Token Verification
+## ⚠️ Important Precautions & Platform Specifics
+While the OSL package simplifies the Unity side of things, each platform maintains strict rules regarding security and implementation.
 
-Never trust the tokens (ID Token, Access Token, JWT, Session Ticket) sent directly from the Unity client. You must send these tokens to your backend server and verify their validity. Relying solely on client-side authentication is a critical security risk.
+### Global Security Standard
+- **Backend Verification is Mandatory**: Never trust the Identity Token (JWT), Access Token, or Session Ticket returned directly to the Unity client. You **MUST** send these tokens to your secure backend server and verify them using the respective platform's Official Auth API. Relying solely on client-side authentication is a critical vulnerability.
 
-* **Google:** Verify the ID Token via `google-auth-library` or `tokeninfo` endpoint.
-* **Facebook:** Verify the Access Token via Facebook's Graph API (`debug_token` endpoint).
-* **Apple:** Verify the JWT signature using Apple's public keys.
-* **Steam:** Verify the Hex Session Ticket via the `ISteamUserAuth/AuthenticateUserTicket` Web API using your secure Publisher Key.
+### 🍎 Apple Sign-In
+- **Supported Platforms**: iOS (Native via AuthenticationServices).
+- **Profile Scope Constraint**: Apple only provides the user's name and email on the **very first** successful sign-in. Subsequent sign-ins will only return the Identity Token. Do not design your database to expect the email string on every login attempt.
+- **No Silent Sign-In**: Apple strictly enforces explicit user intent via FaceID/TouchID. Calling SilentSignIn() will automatically fallback to the standard SignIn() UI prompt.
 
-## Important Precautions
+### 📘 Facebook Login
+- **Supported Platforms**: iOS, Android, WebGL. (PC/Standalone is explicitly excluded to comply with Meta's deprecation of desktop native OAuth flows).
+- **WebGL HTTPS Requirement**: Facebook's JavaScript SDK strictly requires an https:// secure connection. Running local tests on an http:// endpoint will result in Facebook blocking the login attempt entirely.
 
-1. **GameObject Naming Convention (CRITICAL):** All native bridges use `UnitySendMessage` to route callbacks. You **MUST** name your GameObjects exactly as expected (e.g., `GoogleSigninManager`, `FacebookSigninManager`, `AppleSigninManager`, `SteamSigninManager`).
-2. **Facebook WebGL HTTPS Requirement:** Facebook's JavaScript SDK strictly requires an `https://` secure connection. Running WebGL on a local `http://` server will result in Facebook blocking the login attempt.
-3. **Apple Silent Sign-In:** Apple requires explicit user intent (via FaceID/TouchID). Calling `SilentSignIn()` will automatically redirect to the standard `SignIn()` UI prompt.
-4. **Apple User Profile Scope:** Apple only provides the user's name and email on the *very first* successful sign-in. Subsequent sign-ins return the Identity Token only.
-5. **Steam Client Background Requirement:** Steam Sign-In strictly requires the Steam desktop client to be actively running and logged in. Calling `Init()` without the Steam Client will result in an initialization failure.
-6. **Steam Update Loop:** You **MUST** implement `Steamworks.SteamClient.RunCallbacks();` inside an `Update()` method for Steam's native network callbacks to fire properly.
+### 🇬 Google Sign-In
+- **Supported Platforms**: iOS, Android, WebGL, Standalone (PC).
+- **Android SHA-1 Config**: You must copy the SHA-1 fingerprints for BOTH your local Unity Debug Keystore and your Release App Signing certificate to the Google Cloud Console. Failure to do so will result in an ApiException (Status Code 10).
+- **EDM4U Required**: For mobile, use External Dependency Manager (EDM4U) to resolve Android (play-services-auth) and iOS (CocoaPods) library dependencies automatically.
+- **PC Local Loopback**: The Standalone PC module uses a local HttpListener. You must add exactly http://127.0.0.1:50000/ to the *Authorized redirect URIs* in the Google Console 'Desktop app' credentials. 
+
+### 💨 Steamworks
+- **Supported Platforms**: Standalone (Windows, macOS, Linux, Steam Deck).
+- **Steam Client Dependency**: Steam authentication cannot happen independently. The Steam Client application MUST be installed, running, and logged into a valid account on the development PC.
+- **steam_appid.txt Required**: You must create a text file named exactly steam_appid.txt in the physical root folder of your project (outside Assets, near your .sln file) and enter only your API ID (e.g., 480) to test in the Unity Editor.
